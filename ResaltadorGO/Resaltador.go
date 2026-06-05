@@ -1,4 +1,4 @@
-package Resaltador 
+package main 
 
 import (
 	"fmt"
