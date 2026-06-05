@@ -89,7 +89,7 @@ def highlight(codigo, lenguaje):
     print()
 
 
-archivos = ["codigo.py", "codigo.cpp", "codigo.erl"]
+archivos = ["Codigo.py", "Codigo.cpp", "codigo.erl"]
 
 for archivo in archivos:
     try:
