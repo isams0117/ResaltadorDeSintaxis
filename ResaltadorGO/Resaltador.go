@@ -67,9 +67,9 @@ func main() {
 
 	//archivos a analizar
 	files := []string{
-		"codigo1.py",
-		"codigo2.cpp",
-		"codigo3.erl",
+		"Codigo1.py",
+		"Codigo2.cpp",
+		"Codigo3.erl",
 	}
 
 	results := make(chan Token) //crear canal por donde viajarán los tokens
