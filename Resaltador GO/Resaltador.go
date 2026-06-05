@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"sync"
+	"time"
 )
 
 //Almacena la información de cada token encontrado
@@ -16,9 +17,16 @@ type Token struct {
 
 //Patrones a buscar dentro de los archivos
 var tokenPatterns = map[string]string{
-	"KEYWORD": `\b(if|else|while|return|switch|case)\b`,
-	"NUMBER":  `\b\d+(\.\d+)?\b`,
-	"COMMENT": `(#.*|//.*)`,
+	"KEYWORD":    `\b(if|else|while|match|switch|case|return|lambda|of|end|fun)\b`,
+	"LOGICAL":    `\b(and|or|not)\b|&&|\|\||!`,
+	"COMPARISON": `==|!=|<=|>=|<|>|/=|=<`,
+	"ARITHMETIC": `[+\-*/]`,
+	"BOOLEAN":    `\b(true|false|True|False)\b`,
+	"NULL":       `\b(None|nullptr)\b`,
+	"NUMBER":     `\b\d+(\.\d+)?\b`,
+	"STRING":     `"[^"]*"|'[^']*'`,
+	"COMMENT":    `#.*|//.*|%.*`,
+	"IDENTIFIER": `\b[a-zA-Z_][a-zA-Z0-9_]*\b`,
 }
 
 
@@ -55,6 +63,8 @@ func processFile(filename string, results chan<- Token, wg *sync.WaitGroup) {
 
 func main() {
 
+	start := time.Now() //marcar el inicio de la ejecución
+
 	//archivos a analizar
 	files := []string{
 		"codigo1.py",
@@ -90,5 +100,8 @@ func main() {
 			token.Type,
 			token.Value)
 	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("\nTiempo de ejecución: %v\n", elapsed)
 }
 

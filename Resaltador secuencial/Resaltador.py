@@ -1,4 +1,7 @@
 import re
+import time 
+
+inicio = time.time()
 
 PalabrasReservadas = ["if", "else", "while", "match", "switch", "case", "return", "lambda"]
 OperadoresAritmeticos = ["+", "-", "*", "/"]
@@ -97,3 +100,6 @@ for archivo in archivos:
         highlight(contenido, lenguaje)
     except FileNotFoundError:
         print(f"✗ {archivo} no encontrado")
+
+fin = time.time()
+print(f"\nTiempo de ejecución: {fin - inicio:.6f} segundos")
