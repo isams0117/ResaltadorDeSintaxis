@@ -1,4 +1,4 @@
-package main 
+package main
 
 import (
 	"fmt"
@@ -8,14 +8,24 @@ import (
 	"time"
 )
 
-//Almacena la información de cada token encontrado
+// Códigos de color ANSI
+const (
+	ColorReset   = "\033[0m"
+	ColorGreen   = "\033[92m"
+	ColorYellow  = "\033[93m"
+	ColorRed     = "\033[91m"
+	ColorGray    = "\033[90m"
+	ColorMagenta = "\033[95m"
+	ColorCyan    = "\033[96m"
+	ColorBlue    = "\033[94m"
+)
+
 type Token struct {
 	File  string
 	Type  string
 	Value string
 }
 
-//Patrones a buscar dentro de los archivos
 var tokenPatterns = map[string]string{
 	"KEYWORD":    `\b(if|else|while|match|switch|case|return|lambda|of|end|fun)\b`,
 	"LOGICAL":    `\b(and|or|not)\b|&&|\|\||!`,
@@ -29,30 +39,47 @@ var tokenPatterns = map[string]string{
 	"IDENTIFIER": `\b[a-zA-Z_][a-zA-Z0-9_]*\b`,
 }
 
+func colorize(tokenType string, value string) string {
+	switch tokenType {
+	case "KEYWORD":
+		return ColorGreen + value + ColorReset
+	case "LOGICAL":
+		return ColorYellow + value + ColorReset
+	case "ARITHMETIC", "COMPARISON":
+		return ColorRed + value + ColorReset
+	case "COMMENT":
+		return ColorGray + value + ColorReset
+	case "STRING":
+		return ColorMagenta + value + ColorReset
+	case "BOOLEAN":
+		return ColorCyan + value + ColorReset
+	case "NULL":
+		return ColorBlue + value + ColorReset
+	case "NUMBER":
+		return ColorYellow + value + ColorReset
+	default:
+		return value
+	}
+}
 
-//Procesa el archivo completo
-//results es el canal por donde se enviarán los tokens
-func processFile(filename string, results chan<- Token, wg *sync.WaitGroup) {
+// Cada archivo tiene su propio canal
+func processFile(filename string, ch chan<- Token, wg *sync.WaitGroup) {
 	defer wg.Done()
+	defer close(ch) // cierra su canal al terminar
 
-	content, err := os.ReadFile(filename) //Lee todo el arhivo y se guarda como texto
+	content, err := os.ReadFile(filename)
 	if err != nil {
-		fmt.Printf("Error leyendo %s: %v\n", filename, err)
+		fmt.Printf("✗ %s no encontrado\n", filename)
 		return
 	}
 
-	text := string(content) //Convertir a string
+	text := string(content)
 
-	//Recorre todos los patrones
 	for tokenType, pattern := range tokenPatterns {
-		re := regexp.MustCompile(pattern) //crea el regex
-
-		matches := re.FindAllString(text, -1) //busca coincidencias
-
-		//Recorrer coincidencias
+		re := regexp.MustCompile(pattern)
+		matches := re.FindAllString(text, -1)
 		for _, match := range matches {
-			//envía el token por el canal
-			results <- Token{
+			ch <- Token{
 				File:  filename,
 				Type:  tokenType,
 				Value: match,
@@ -62,46 +89,36 @@ func processFile(filename string, results chan<- Token, wg *sync.WaitGroup) {
 }
 
 func main() {
+	start := time.Now()
 
-	start := time.Now() //marcar el inicio de la ejecución
-
-	//archivos a analizar
 	files := []string{
 		"Codigo1.py",
 		"Codigo2.cpp",
 		"Codigo3.erl",
 	}
 
-	results := make(chan Token) //crear canal por donde viajarán los tokens
+	// Crear un canal por archivo
+	channels := make([]chan Token, len(files))
+	var wg sync.WaitGroup
 
-	var wg sync.WaitGroup //crear waitgroup 
-	//Para contar cuantas goroutines siguen trabajando
-
-	//crear go routines
-	for _, file := range files {
-		wg.Add(1) //incrementar contador
-		go processFile(file, results, &wg) //lanzar goroutine
+	for i, file := range files {
+		channels[i] = make(chan Token, 100) // buffer de 100 tokens
+		wg.Add(1)
+		go processFile(file, channels[i], &wg) // goroutine por archivo
 	}
-
-	//cerrar canal cuando todos terminen
-	go func() {
-		wg.Wait() //esta goroutines espera hasta que las demás terminen
-		close(results)
-	}()
 
 	fmt.Println("TOKENS ENCONTRADOS")
 	fmt.Println("==================")
 
-	//Consumir resultados
-	//Escucha continuamente el canal y cada que llegue un token lo imprime
-	for token := range results {
-		fmt.Printf("[%s] %-8s -> %s\n",
-			token.File,
-			token.Type,
-			token.Value)
+	// Leer canales EN ORDEN — un archivo a la vez
+	for i, ch := range channels {
+		fmt.Printf("\n=== %s ===\n", files[i])
+		for token := range ch {
+			colored := colorize(token.Type, token.Value)
+			fmt.Printf("  %-12s -> %s\n", token.Type, colored)
+		}
 	}
 
 	elapsed := time.Since(start)
 	fmt.Printf("\nTiempo de ejecución: %v\n", elapsed)
 }
-
